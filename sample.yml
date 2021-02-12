@@ -1,0 +1,83 @@
+- name: node_language_detector
+  description: Detects node language
+  type: language
+  vars:
+    - name: package_json_paths
+      value:
+        source: compute
+        for: FilesInfo
+        iterator: iterator
+        where:
+          - iterator.Key like package.config
+        value:
+          field: Path
+
+  framework_detectors:
+    uses: react_framework_detector
+      with:
+        package_json_paths: vars.package_json_paths
+  deploy_target_detectors:
+    uses: azure_function_detector
+      with:
+        project_paths: vars.package_json_paths
+
+  response:
+    - name: languageVersion
+      value:
+        for: vars.package_json_paths
+        iterator: iterator
+        where:
+          - {{GetJSONFieldByPath iterator engines.node}}{{/GetJSONFieldByPath}} not ‘’
+        value:
+ 	        expression: {{GetJSONFieldByPath iterator engines.node}}{{/GetJSONFieldByPath}}
+
+- name: react_framework_detector
+  description: Detects react language
+  type: framework
+  vars:
+    - name: package_json_paths
+      value:
+        source: argument
+    - name: package_json_with_react_paths
+      value:
+        source: compute
+        for: FilesInfo
+        iterator: iterator
+        where:
+          - {{GetJSONFieldByPath iterator dependencies.react}}{{/GetJSONFieldByPath}} not ‘’
+        value:
+          expression: iterator
+
+  response:
+    - name: workingDirectory
+      value:
+        for: vars.package_json_with_react_paths
+        iterator: iterator
+        value:
+ 	        field: {{GetDirectory iterator}}{{/GetDirectory}}
+    - name: reactVersion
+      value:
+        for: vars.package_json_with_react_paths
+        iterator: iterator
+        value:
+          expression: {{GetJSONFieldByPath iterator dependencies.react}}{{/GetJSONFieldByPath}}
+- name: azure_function_detector
+  description: Detector azure function deployTarget
+  type: deployTarget
+  vars:
+    - name: host_json_paths
+      value:
+        source: compute
+        for: FilesInfo
+        iterator: iterator
+        where:
+          - iterator.Key like host.json
+        value:
+          field: Path
+  response:
+  - name: workingDirectory
+    value:
+      for: vars.host_json_paths
+      iterator: iterator
+      value:
+        field: {{GetDirectory iterator}}{{/GetDirectory}}
