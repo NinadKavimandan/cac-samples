@@ -19,9 +19,7 @@
         package_json_paths: vars.package_json_paths
   deploy_target_detectors:
     uses: azure_function_detector
-      with:
-        project_paths: vars.package_json_paths
-
+   
   response:
     - name: languageVersion
       value:
