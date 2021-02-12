@@ -1,6 +1,7 @@
 - name: node_language_detector
   description: Detects node language
   type: language
+  language_name: node
   vars:
     - name: package_json_paths
       value:
@@ -34,6 +35,7 @@
 - name: react_framework_detector
   description: Detects react language
   type: framework
+  framework_name: react
   vars:
     - name: package_json_paths
       value:
@@ -64,6 +66,7 @@
 - name: azure_function_detector
   description: Detector azure function deployTarget
   type: deployTarget
+  deploy_target_name: azure:functions
   vars:
     - name: host_json_paths
       value:
