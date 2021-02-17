@@ -13,12 +13,13 @@
         value:
           field: Path
 
-  framework_detectors:
-    uses: react_framework_detector
+  steps:
+    - uses: react_framework_detector
+      type: framework
       with:
         package_json_paths: vars.package_json_paths
-  deploy_target_detectors:
-    uses: azure_function_detector
+    - uses: azure_function_detector
+      type: deployTarget
    
   response:
     - name: languageVersion
@@ -41,7 +42,7 @@
     - name: package_json_with_react_paths
       value:
         source: compute
-        for: FilesInfo
+        for: vars.package_json_paths
         iterator: iterator
         where:
           - {{GetJSONFieldByPath iterator dependencies.react}}{{/GetJSONFieldByPath}} not ‘’
@@ -61,6 +62,7 @@
         iterator: iterator
         value:
           expression: {{GetJSONFieldByPath iterator dependencies.react}}{{/GetJSONFieldByPath}}
+
 - name: azure_function_detector
   description: Detector azure function deployTarget
   type: deployTarget
