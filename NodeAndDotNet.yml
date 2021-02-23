@@ -1,0 +1,203 @@
+- name: node_language_detector
+  description: Detects node language
+  type: language
+  language_name: node
+  vars:
+    - name: package_json_paths
+      value:
+        source: compute
+        for: FilesInfo
+        iterator: iterator
+        where:
+          - iterator.Key like 'package.json'
+        value:
+          expression: iterator.Value.Path
+    - name: package_json_directories
+      value:
+        source: compute
+        for: vars.package_json_paths
+        iterator: iterator
+        value:
+          expression: {{GetDirectory iterator}}{{/GetDirectory}}
+
+  steps:
+    - uses: react_framework_detector
+      type: framework
+      with:
+        package_json_paths: vars.package_json_paths
+    - uses: azure_function_detector
+      type: deployTarget
+      with:
+        language_detection_directories: vars.package_json_directories
+   
+  response:
+    - name: languageVersion
+      value:
+        for: vars.package_json_paths
+        iterator: iterator
+        where:
+          - {{GetJSONFieldByPath iterator engines.node}}{{/GetJSONFieldByPath}} not ‘’
+        value:
+ 	        expression: {{GetJSONFieldByPath iterator engines.node}}{{/GetJSONFieldByPath}}
+
+- name: react_framework_detector
+  description: Detects react language
+  type: framework
+  framework_name: react
+  vars:
+    - name: package_json_paths
+      value:
+        source: argument
+    - name: package_json_with_react_paths
+      value:
+        source: compute
+        for: vars.package_json_paths
+        iterator: iterator
+        where:
+          - {{GetJSONFieldByPath iterator dependencies.react}}{{/GetJSONFieldByPath}} not ‘’
+        value:
+          expression: iterator
+
+  response:
+    - name: workingDirectory
+      value:
+        for: vars.package_json_with_react_paths
+        iterator: iterator
+        value:
+ 	        expression: {{GetDirectory iterator}}{{/GetDirectory}}
+    - name: reactVersion
+      value:
+        for: vars.package_json_with_react_paths
+        iterator: iterator
+        value:
+          expression: {{GetJSONFieldByPath iterator dependencies.react}}{{/GetJSONFieldByPath}}
+
+- name: dotnet_language_detector
+  description: Detects dotnet language
+  type: language
+  language_name: dotnet
+  vars:
+    - name: csproj_paths
+      value:
+        source: compute
+        for: FilesInfo
+        iterator: iterator
+        where:
+          - iterator.Key like '*.csproj'
+        value:
+          expression: iterator.Value.Path
+    - name: dotnet_csproj_paths
+      value:
+        source: compute
+        for: vars.csproj_paths
+        iterator: iterator
+        where:
+          - {{GetXMLFieldByPath iteartor TargetFrameworkVersion}}{{/GetXMLFieldByPath}} like v[1-4]{1}.[0-9]{1,2}
+        value:
+          field: iterator
+      - name: dotnet_csproj_directories
+        value:
+          source: compute
+          for: vars.dotnet_csproj_paths
+          iterator: iterator
+          value:
+            expression: {{GetDirectory iterator}}{{/GetDirectory}}
+        
+  steps:
+    - uses: aspnet_framework_detector
+      type: framework
+      with:
+        dotnet_csproj_paths: vars.dotnet_csproj_paths
+        dotnet_csproj_directories: vars.dotnet_csproj_directories
+    - uses: azure_function_detector
+      type: deployTarget
+      with:
+        language_detection_directories: dotnet_csproj_directories
+   
+  response:
+    - name: languageVersion
+      value:
+        for: vars.csproj_paths
+        iterator: iterator
+        value:
+ 	        expression: {{GetXMLFieldByPath iteartor TargetFrameworkVersion}}{{/GetXMLFieldByPath}}
+
+
+- name: aspnet_framework_detector
+  description: Detects ASP.NET projects
+  type: framework
+  framework_name: aspnet
+  vars:
+    - name: dotnet_csproj_paths
+      value:
+        source: argument
+    - name: dotnet_csproj_directories
+      value:
+        source: argument
+    - name: web_config_directories
+      value:
+        source: compute
+        for: FilesInfo
+        iterator: iterator
+        where:
+          - iterator.Key like 'web.config'
+        value:
+          expression: {{GetDirectory iterator.Value.Path}}{{/GetDirectory}}
+    - name: sln_directories
+      value:
+        source: compute
+        for: FilesInfo
+        iterator: iterator
+        where:
+          - iterator.Key like '*.sln'
+        value:
+          expression: {{GetDirectory iterator.Value.Path}}{{/GetDirectory}}
+  response:
+    - name: workingDirectory
+      value:
+        source: compute
+        value:
+          expression: {{GetCommonMembers vars.dotnet_csproj_directories vars.web_config_directories}}{{/GetCommonMembers}}
+    - name: solutionDirectory
+      value:
+        source: compute
+        value:
+          expression: {{GetCommonMembers vars.dotnet_csproj_directories vars.sln_directories}}{{/GetCommonMembers}}
+        
+- name: azure_function_detector
+  description: Detector azure function deployTarget
+  type: deployTarget
+  deploy_target_name: azure:functions
+  vars:
+    - name: language_detection_directories
+      value:
+        source: argument
+    - name: host_json_paths
+      value:
+        source: compute
+        for: FilesInfo
+        iterator: iterator
+        where:
+          - iterator.Key like 'host.json'
+        value:
+          expression: iterator.Value.Path
+    - name: host_json_directories
+      value:
+        source: compute
+        for: host_json_paths
+        iterator: iterator
+        value:
+          expression: {{GetDirectory iterator.Value.Path}}{{/GetDirectory}}
+  response:
+  - name: workingDirectory
+    value:
+      source: compute
+      value:
+        expression: {{GetCommonMembers vars.language_detection_directories vars.host_json_directories}}{{/GetCommonMembers}}
+  - name: hostJsonPath
+    value:
+      source: compute
+      for: vars.host_json_paths
+      iterator: iterator
+      value:
+        expression: iterator
